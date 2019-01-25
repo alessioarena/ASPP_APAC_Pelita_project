@@ -36,23 +36,26 @@ class BotState:
         self.enemy_track = [[], []] # for enemy[0] and enemy[1] positions
         self.enemy_track_noise = [[], []]
 
+        # enemy cells around the homezone boundary
+        self.homezone_enembound = [(15, i) for i in range(0, 16)] if bot.is_blue else [(16, i) for i in range(0, 16)]
+        self.homezone_enembound = [i for i in self.homezone_enembound if not i in bot.walls]
+
 def move_defend(bot, state, was_recur = False):
     '''
     move routine for defend.
     was_recur indicates whether this was called from within another move routine. This 
     happens when we switch agent modes
     '''
-    # if there are two defenders and no enemies, we can become attackers
-
-
     noisy_e0 = bot.enemy[0].is_noisy
     noisy_e1 = bot.enemy[1].is_noisy
 
     homezone_e0 = bot.enemy[0].position in bot.homezone
     homezone_e1 = bot.enemy[1].position in bot.homezone
 
+    # if there are two defenders and no enemies, we can become attackers
+
     if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
-        if all([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) and not any([homezone_e0, homezone_e1]):
+        if not any([homezone_e0, homezone_e1]):
             state.mode[bot.turn] = Mode.attack
             print(state.mode)
             return move_attack(bot, state, True)
@@ -111,10 +114,8 @@ def move_defend(bot, state, was_recur = False):
             bot.say('Retreat!')
         else:
             ## go for the enemy
-            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G) 
             bot.say('ATTAAAAAACK!!!!!')
-
-
     if next_pos in bot.enemy[0].homezone:
         next_move = (0, 0)
     else:
@@ -131,43 +132,46 @@ def move_attack(bot, state, was_recur = False):
     was_recur indicates whether this was called from within another move routine. This 
     happens when we switch agent modes
     '''
-    
-    # (TODO) attackers in home territory may become defenders
-    if bot.position in bot.homezone and not was_recur:
+
+    if (bot.position in bot.homezone) \
+        and not was_recur:
         switch_seek_target = None
-        if not bot.enemy[0].is_noisy:
+        if bot.enemy[0].position in bot.homezone:
             switch_seek_target = bot.enemy[0].position
-        elif not bot.enemy[1].is_noisy:
+        elif bot.enemy[1].position in bot.homezone:
             switch_seek_target = bot.enemy[1].position
         
         if switch_seek_target != None:
             state.mode[bot.turn] = Mode.defend
             print(state.mode)
             return move_defend(bot, state, was_recur = True)
-
-    # when in attacker mode, we aim for food
+    
     if (state.target[bot.turn] is None) or (state.target[bot.turn] not in bot.enemy[0].food):
         # find new food target with minimal distance to agent
         food_dist = [nx.shortest_path_length(state.nx_G, source = bot.position, target=i) for i in bot.enemy[0].food]
         min_dist_idx = np.argmin(food_dist)
         state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
 
-    if is_stuck(bot):
-        print('attacker stuck')
-        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
-
     next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
-    
-    for enemy in bot.enemy:
-        if next_pos == enemy.position:
-            state.target[bot.bot_turn] = None
-            next_pos = bot.track[-2]
-            if next_pos == enemy.position:
-                next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
+    enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else [] 
+    enemy_dists = [nx.shortest_path_length(state.nx_G, source = next_pos, target = j) for j in enemy_pos] #\
+                # if not bot.position in bot.homezone else []
 
-    if is_stuck(bot):
-        print('attacker stuck')
-        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+    bad_steps = []
+    for i in range(0, len(enemy_pos)):
+        if enemy_dists[i] < 4:
+            # enemy is visible
+            bad_steps += [bot.get_move(next_step(bot.position, enemy_pos[i], state.nx_G)), ]
+
+    if len(bad_steps) > 0:
+        bad_steps += [bot.get_move(bot.track[-2]), (0, 0)]
+        bad_steps += [i for i in bot.legal_moves for j in range(0, len(enemy_pos)) \
+                        if nx.shortest_path_length(state.nx_G, source = bot.get_position(i), target = enemy_pos[j]) <= 1]
+        try:
+            next_pos = bot.get_position(bot.random.choice([i for i in bot.legal_moves if not i in bad_steps]))
+        except:
+            # no possible moves! give up and die
+            next_pos = bot.position
 
 
     next_move = bot.get_move(next_pos)
@@ -176,7 +180,7 @@ def move_attack(bot, state, was_recur = False):
 def move(bot, state):
     try:
         if state is None:
-            state = BotState(bot, [Mode.attack, Mode.defend], bot.position)
+            state = BotState(bot, [Mode.defend, Mode.attack], bot.position)
 
         # manually update tracks
         for i in range(0, len(bot.enemy)):
@@ -184,7 +188,7 @@ def move(bot, state):
             state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
 
         score_checking(bot, state)
-        # print(state.mode)
+        #print(state.mode)
 
         if state.mode[bot.turn] == Mode.defend:
             move, state = move_defend(bot, state)
