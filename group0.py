@@ -43,10 +43,10 @@ def move_defend(bot, state, was_recur = False):
     happens when we switch agent modes
     '''
     # if there are two defenders and no enemies, we can become attackers
-    # if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
-    #     if sum([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) < 2:
-    #         state.mode[bot.turn] = Mode.attack
-    #         return move_attack(bot, state, True)
+    if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
+        if sum([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) == 0:
+            state.mode[bot.turn] = Mode.attack
+            return move_attack(bot, state, True)
 
     noisy_e0 = bot.enemy[0].is_noisy
     noisy_e1 = bot.enemy[1].is_noisy
@@ -110,10 +110,10 @@ def move_defend(bot, state, was_recur = False):
         next_move = (0, 0)
     else:
         next_move = bot.get_move(next_pos)
-        
-    if is_stuck(bot):
-        print('defender stuck')
-        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+
+    # if is_stuck(bot):
+    #     print('defender stuck')
+    #     next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
     return next_move, state
 
 def move_attack(bot, state, was_recur = False):
@@ -124,16 +124,16 @@ def move_attack(bot, state, was_recur = False):
     '''
     
     # (TODO) attackers in home territory may become defenders
-    # if bot.position in bot.homezone and not was_recur:
-    #     switch_seek_target = None
-    #     if not bot.enemy[0].is_noisy:
-    #         switch_seek_target = bot.enemy[0].position
-    #     elif not bot.enemy[1].is_noisy:
-    #         switch_seek_target = bot.enemy[1].position
+    if bot.position in bot.homezone and not was_recur:
+        switch_seek_target = None
+        if not bot.enemy[0].is_noisy:
+            switch_seek_target = bot.enemy[0].position
+        elif not bot.enemy[1].is_noisy:
+            switch_seek_target = bot.enemy[1].position
         
-    #     if switch_seek_target != None:
-    #         state.mode[bot.turn] = Mode.defend;
-    #         return move_defend(bot, state, was_recur = True)
+        if switch_seek_target != None:
+            state.mode[bot.turn] = Mode.defend
+            return move_defend(bot, state, was_recur = True)
 
     # when in attacker mode, we aim for food
     if (state.target[bot.turn] is None) or (state.target[bot.turn] not in bot.enemy[0].food):
@@ -148,31 +148,35 @@ def move_attack(bot, state, was_recur = False):
         if (nx.shortest_path_length(state.nx_G, source = next_pos, target =  enemy.position) < 3)\
                 and (next_pos not in bot.homezone)\
                 and not enemy.is_noisy:
-            state.target[bot.turn] = None
-            next_pos = bot.track[-2]
+            state.target[bot.bot_turn] = bot.spawning
+            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
 
-        next_move = bot.get_move(next_pos)
-        return next_move, state
+    next_move = bot.get_move(next_pos)
+    return next_move, state
 
 def move(bot, state):
-    if state is None:
-        state = BotState(bot, [Mode.attack, Mode.defend], bot.position)
+    try:
+        if state is None:
+            state = BotState(bot, [Mode.attack, Mode.defend], bot.position)
 
-    # manually update tracks
-    for i in range(0, len(bot.enemy)):
-        state.enemy_track[i] += [bot.enemy[i].position]
-        state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
+        # manually update tracks
+        for i in range(0, len(bot.enemy)):
+            state.enemy_track[i] += [bot.enemy[i].position]
+            state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
 
-    score_checking(bot, state)
-    print(state.mode)
+        score_checking(bot, state)
+        print(state.mode)
 
-    if state.mode[bot.turn] == Mode.defend:
-        move, state = move_defend(bot, state)
+        if state.mode[bot.turn] == Mode.defend:
+            move, state = move_defend(bot, state)
+        else:
+            move, state = move_attack(bot, state)
+    except:
+        return (bot.random.choice(bot.legal_moves), state)
     else:
-        move, state = move_attack(bot, state)
-    return move, state
+        return move, state
 
 def score_checking(bot, state):
     '''Check current scores and food left to modify if we need to focus on attack or defense.'''
