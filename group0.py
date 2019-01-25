@@ -45,7 +45,7 @@ def move_defend(bot, state, was_recur = False):
     '''
     # if there are two defenders and no enemies, we can become attackers
     if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
-        if sum([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) < 2:
+        if sum([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) == 0:
             state.mode[bot.turn] = Mode.attack
             return move_attack(bot, state, True)
 
@@ -91,9 +91,9 @@ def move_defend(bot, state, was_recur = False):
     else:
         next_move = bot.get_move(next_pos)
 
-    if is_stuck(bot):
-        print('defender stuck')
-        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+    # if is_stuck(bot):
+    #     print('defender stuck')
+    #     next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
     return next_move, state
 
 def move_attack(bot, state, was_recur = False):
@@ -112,7 +112,7 @@ def move_attack(bot, state, was_recur = False):
             switch_seek_target = bot.enemy[1].position
         
         if switch_seek_target != None:
-            state.mode[bot.turn] = Mode.defend;
+            state.mode[bot.turn] = Mode.defend
             return move_defend(bot, state, was_recur = True)
 
     # when in attacker mode, we aim for food
@@ -128,13 +128,13 @@ def move_attack(bot, state, was_recur = False):
         if (nx.shortest_path_length(state.nx_G, source = next_pos, target =  enemy.position) < 3)\
                 and (next_pos not in bot.homezone)\
                 and not enemy.is_noisy:
-            state.target[bot.turn] = None
-            next_pos = bot.track[-2]
+            state.target[bot.bot_turn] = bot.spawning
+            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
 
-        next_move = bot.get_move(next_pos)
-        return next_move, state
+    next_move = bot.get_move(next_pos)
+    return next_move, state
 
 def move(bot, state):
     try:
