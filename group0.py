@@ -6,7 +6,6 @@ import networkx as nx
 import enum
 from pelita.utils import Graph
 from group0_utils import *
-import pdb 
 import matplotlib as mp
 import matplotlib.pyplot as plt
 
@@ -19,7 +18,7 @@ class Mode(enum.Enum):
 
 def is_stuck(bot):
     return (len(bot.track) > 5) and (len(set(bot.track[-5:])) <= 2)
-    
+
 
 class BotState:
     '''
@@ -44,22 +43,47 @@ def move_defend(bot, state, was_recur = False):
     happens when we switch agent modes
     '''
     # if there are two defenders and no enemies, we can become attackers
+
+
+    noisy_e0 = bot.enemy[0].is_noisy
+    noisy_e1 = bot.enemy[1].is_noisy
+
+    homezone_e0 = bot.enemy[0].position in bot.homezone
+    homezone_e1 = bot.enemy[1].position in bot.homezone
+
     if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
-        if sum([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) == 0:
+        if all([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) and not any([homezone_e0, homezone_e1]):
             state.mode[bot.turn] = Mode.attack
+            print(state.mode)
             return move_attack(bot, state, True)
 
+
+    closest = closest_position(bot.position, (bot.enemy[0].position, bot.enemy[1].position), state.nx_G)
+
     # target selection logic
-    if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
-        # both enemies noisy, basically we ignore
-        state.target[bot.turn] = bot.enemy[bot.turn].position
+    ## both in homezone
+    if all([homezone_e0, homezone_e1]):
+        if noisy_e0 + noisy_e1 == 1:
+            ## select bot 0 if bot 1 is noisy (and therefore bot 0 is not)
+            state.target[bot.turn] = bot.enemy[0].position if noisy_e1 else bot.enemy[1].position
+        else:
+            state.target[bot.turn] = bot.enemy[closest].position
+    elif homezone_e0 + homezone_e1 == 1:
+        ## select the one in the homezone
+        state.target[bot.turn] = bot.enemy[0].position if homezone_e0 else bot.enemy[1].position
+    else:
+        state.target[bot.turn] = bot.enemy[closest].position
+
+    # if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
+    #     # both enemies noisy, basically we ignore
+    #     state.target[bot.turn] = bot.enemy[bot.turn].position
     
-    elif not bot.enemy[bot.turn].is_noisy:
-        # pursuit
-        state.target[bot.turn] = bot.enemy[bot.turn].position
-    elif not bot.enemy[1-bot.turn].is_noisy:
-        # pursuit
-        state.target[bot.turn] = bot.enemy[1-bot.turn].position
+    # elif not bot.enemy[bot.turn].is_noisy:
+    #     # pursuit
+    #     state.target[bot.turn] = bot.enemy[bot.turn].position
+    # elif not bot.enemy[1-bot.turn].is_noisy:
+    #     # pursuit
+    #     state.target[bot.turn] = bot.enemy[1-bot.turn].position
 
     # movement logic
     width = max([coord[0] for coord in bot.walls]) + 1
@@ -82,9 +106,14 @@ def move_defend(bot, state, was_recur = False):
                 #### override with stay
                 next_move = (0, 0)
     else:
-        ## go for the enemy
-        next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
-        bot.say('ATTAAAAAACK!!!!!')
+        if state.target[bot.turn] not in bot.homezone:
+            next_pos = next_step(bot.position, base, state.nx_G)
+            bot.say('Retreat!')
+        else:
+            ## go for the enemy
+            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+            bot.say('ATTAAAAAACK!!!!!')
+
 
     if next_pos in bot.enemy[0].homezone:
         next_move = (0, 0)
@@ -113,6 +142,7 @@ def move_attack(bot, state, was_recur = False):
         
         if switch_seek_target != None:
             state.mode[bot.turn] = Mode.defend
+            print(state.mode)
             return move_defend(bot, state, was_recur = True)
 
     # when in attacker mode, we aim for food
@@ -135,6 +165,11 @@ def move_attack(bot, state, was_recur = False):
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
 
+    if is_stuck(bot):
+        print('attacker stuck')
+        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+
+
     next_move = bot.get_move(next_pos)
     return next_move, state
 
@@ -149,7 +184,7 @@ def move(bot, state):
             state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
 
         score_checking(bot, state)
-        print(state.mode)
+        # print(state.mode)
 
         if state.mode[bot.turn] == Mode.defend:
             move, state = move_defend(bot, state)
