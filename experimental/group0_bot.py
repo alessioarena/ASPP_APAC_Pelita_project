@@ -116,3 +116,35 @@ def move(bot, state):
     if move == (0, 0):
         state.stat_counter[bot.turn]+=1
     return move, state
+
+def score_checking(bot, state):
+    '''Check current scores and food left to modify if we need to focus on attack or defense.'''
+    own_score = bot.score
+    enemy_score = bot.enemy[0].score
+    food_for_us = len(bot.food)
+    food_for_them = len(bot.enemy[0].food)
+    winning = own_score > enemy_score
+    if winning:
+        # If we are winning and have nearly no food left, race to finish it (prevent attack bot from turning defensive
+        if food_for_us <= 3:
+            # Attack!
+            state.mode[0] = Mode.attack
+            state.mode[1] = Mode.attack
+            return state            
+        # If we are winning and enemy has nearly no food left, continue as we are to maximise score
+        if food_for_them <= 3:
+            return state
+    elif not winning:
+        # If we are losing and have nearly no food left, make both bots defend so we don't end the game when we're losing
+        # OR
+        # If we are losing and enemy has nearly no food left, make both bots defend so enemy can't easily force win
+        if (food_for_us <= 3) or (food_for_them <= 3):
+            # Defend
+            state.mode[0] = Mode.defend
+            state.mode[1] = Mode.defend
+            return state
+    elif own_score == enemy_score:
+        # If the game is drawn, continue as we are until a condition is met.
+        return state
+    else:
+        raise Exception("How did this case arise?")

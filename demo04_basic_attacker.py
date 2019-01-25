@@ -10,6 +10,7 @@ from pelita.utils import Graph
 from utils import next_step
 
 def move(bot, state):
+    import pdb; pdb.set_trace()
     # we need to create a dictionary to keep information (state) along rounds
     # the state object will be passed untouched at every new round
     if state is None:
