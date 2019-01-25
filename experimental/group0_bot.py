@@ -103,11 +103,14 @@ def move_attack(bot, state, was_recur = False):
 def move(bot, state):
     if state is None:
         state = BotState(bot, [Mode.attack, Mode.defend])
+
     # manually update tracks
     for i in range(0, len(bot.enemy)):
         state.enemy_track[i] += [bot.enemy[i].position]
         state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
-    
+
+    score_checking(bot, state)
+    print(state.mode)
     if state.mode[bot.turn] == Mode.defend:
         move, state = move_defend(bot, state)
     else:
