@@ -6,7 +6,6 @@ import networkx as nx
 import enum
 from pelita.utils import Graph
 from group0_utils import *
-import pdb 
 import matplotlib as mp
 import matplotlib.pyplot as plt
 
@@ -18,7 +17,7 @@ class Mode(enum.Enum):
     attack = 1
 
 def is_stuck(bot):
-    return (len(bot.track) > 4) and (len(set(bot.track[-3:])) <= 2)
+    return (len(bot.track) > 4) and (len(set(bot.track[-5:])) <= 2)
     
 
 class BotState:
@@ -49,17 +48,38 @@ def move_defend(bot, state, was_recur = False):
     #         state.mode[bot.turn] = Mode.attack
     #         return move_attack(bot, state, True)
 
+    noisy_e0 = bot.enemy[0].is_noisy
+    noisy_e1 = bot.enemy[1].is_noisy
+
+    homezone_e0 = bot.enemy[0].position in bot.homezone
+    homezone_e1 = bot.enemy[1].position in bot.homezone
+
+    closest = closest_position(bot.position, (bot.enemy[0].position, bot.enemy[1].position), state.nx_G)
+
     # target selection logic
-    if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
-        # both enemies noisy, basically we ignore
-        state.target[bot.turn] = bot.enemy[bot.turn].position
+    ## both in homezone
+    if all([homezone_e0, homezone_e1]):
+        if noisy_e0 + noisy_e1 == 1:
+            ## select bot 0 if bot 1 is noisy (and therefore bot 0 is not)
+            state.target[bot.turn] = bot.enemy[0].position if noisy_e1 else bot.enemy[1].position
+        else:
+            state.target[bot.turn] = bot.enemy[closest].position
+    elif homezone_e0 + homezone_e1 == 1:
+        ## select the one in the homezone
+        state.target[bot.turn] = bot.enemy[0].position if homezone_e0 else bot.enemy[1].position
+    else:
+        state.target[bot.turn] = bot.enemy[closest].position
+
+    # if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
+    #     # both enemies noisy, basically we ignore
+    #     state.target[bot.turn] = bot.enemy[bot.turn].position
     
-    elif not bot.enemy[bot.turn].is_noisy:
-        # pursuit
-        state.target[bot.turn] = bot.enemy[bot.turn].position
-    elif not bot.enemy[1-bot.turn].is_noisy:
-        # pursuit
-        state.target[bot.turn] = bot.enemy[1-bot.turn].position
+    # elif not bot.enemy[bot.turn].is_noisy:
+    #     # pursuit
+    #     state.target[bot.turn] = bot.enemy[bot.turn].position
+    # elif not bot.enemy[1-bot.turn].is_noisy:
+    #     # pursuit
+    #     state.target[bot.turn] = bot.enemy[1-bot.turn].position
 
     # movement logic
     width = max([coord[0] for coord in bot.walls]) + 1
