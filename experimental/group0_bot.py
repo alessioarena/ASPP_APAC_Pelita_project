@@ -137,22 +137,26 @@ def move_attack(bot, state, was_recur = False):
         return next_move, state
 
 def move(bot, state):
-    if state is None:
-        state = BotState(bot, [Mode.attack, Mode.defend], bot.position)
+    try:
+        if state is None:
+            state = BotState(bot, [Mode.attack, Mode.defend], bot.position)
 
-    # manually update tracks
-    for i in range(0, len(bot.enemy)):
-        state.enemy_track[i] += [bot.enemy[i].position]
-        state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
+        # manually update tracks
+        for i in range(0, len(bot.enemy)):
+            state.enemy_track[i] += [bot.enemy[i].position]
+            state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
 
-    score_checking(bot, state)
-    print(state.mode)
+        score_checking(bot, state)
+        print(state.mode)
 
-    if state.mode[bot.turn] == Mode.defend:
-        move, state = move_defend(bot, state)
+        if state.mode[bot.turn] == Mode.defend:
+            move, state = move_defend(bot, state)
+        else:
+            move, state = move_attack(bot, state)
+    except:
+        return (bot.random.choice(bot.legal_moves), state)
     else:
-        move, state = move_attack(bot, state)
-    return move, state
+        return move, state
 
 def score_checking(bot, state):
     '''Check current scores and food left to modify if we need to focus on attack or defense.'''
