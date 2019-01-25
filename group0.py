@@ -182,8 +182,17 @@ def move_attack(bot, state, was_recur = False):
     next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
     
     for enemy in bot.enemy:
+        if not enemy.is_noisy:
+            print("ERE")
+            food_dist = [nx.shortest_path_length(state.nx_G, source = bot.position, target=i) for i in bot.enemy[0].food]
+            enemy_dist = [nx.shortest_path_length(state.nx_G, source = enemy.position, target=i) for i in bot.enemy[0].food]
+            food_enemy_diff = np.array(enemy_dist) - np.array(food_dist)
+            if np.max(food_enemy_diff) > 0:
+                min_dist_idx = np.argmax(food_enemy_diff)
+                state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
+                next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)                
         if next_pos == enemy.position:
-            state.target[bot.bot_turn] = None
+            state.target[bot.turn] = None
             next_pos = bot.track[-2]
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
