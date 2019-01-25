@@ -205,6 +205,7 @@ def score_checking(bot, state):
     if winning:
         # If we are winning and have nearly no food left, race to finish it (prevent attack bot from turning defensive
         if food_for_us <= 3:
+            print("Attack mode initiated")
             # Attack!
             state.mode[0] = Mode.attack
             state.mode[1] = Mode.attack
@@ -217,7 +218,8 @@ def score_checking(bot, state):
         # OR
         # If we are losing and enemy has nearly no food left, make both bots defend so enemy can't easily force win
         if (food_for_us <= 3) or (food_for_them <= 3):
-            # Defend
+            print("Defense mode initiated")
+	    # Defend
             state.mode[0] = Mode.defend
             state.mode[1] = Mode.defend
             return state
