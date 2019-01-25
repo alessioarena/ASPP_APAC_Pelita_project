@@ -18,7 +18,7 @@ def move(bot, state):
     if state[bot.turn]:
         # speak for as many rounds as EATEN_INTERTIA
         bot.say(MESSAGE)
-        state[turn] -= 1
+        state[bot.turn] -= 1
 
     # copy the available moves, so that we can use random.shuffle,
     # which unfortunately shuffles lists in-place.

@@ -9,7 +9,7 @@ def closest_position(bot_position, target_positions, graph):
     # iterate through targets and calculate path lenghts
     all_distances = []
     for target in target_positions:
-        all_distances.append(networkx.shortest_path_length(graph, bot_position, target, weight='homebase'))
+        all_distances.append(networkx.shortest_path_length(graph, bot_position, target, weight="weight"))
 
     # returning the index of the closest target
     return np.argmin(all_distances)
@@ -21,7 +21,7 @@ def next_step(bot_position, target_position, graph):
     in the (shortest-)path to target_position.
 
     The shortest path is computed on the graph using the a-star algorithm"""
-    return networkx.shortest_path(graph, bot_position, target_position, weight='homebase')[1]
+    return networkx.shortest_path(graph, bot_position, target_position, weight="weight")[1]
 
 
 def find_gaps(width, heigth, walls):
@@ -35,21 +35,20 @@ def walls_to_nxgraph(walls, homezone=None):
     graph = networkx.Graph()
     width = max([coord[0] for coord in walls]) + 1
     heigth = max([coord[1] for coord in walls]) + 1
-    half_way = int(width / 2)
+    middle_x = int(width / 2)
+    middle_y = int(heigth / 2)
     central_heigth = (y for y in range(2, heigth - 2))
     if width - 2 == max([coord[0] for coord in homezone]):
         # you are starting on the right
-        print("right")
-        exclusion = [(x, y) for x in (half_way+1, half_way+2) for y in central_heigth]
+        exclusion = [(x, y) for x in (middle_x+1, middle_x+2) for y in central_heigth]
     else:
-        print("left")
-        exclusion = [(x, y) for x in (half_way, half_way-1) for y in central_heigth]
+        exclusion = [(x, y) for x in (middle_x, middle_x-1) for y in central_heigth]
         # you are starting on the left
     for coords in find_gaps(width, heigth, walls):
         if coords not in homezone or coords in exclusion:
-            graph.add_node(coords, homebase=10)
+            graph.add_node(coords, weight=500)
         else:
-            graph.add_node(coords, homebase=1)
+            graph.add_node(coords, weight=coords[0])
         for delta_x, delta_y in ((1,0), (-1,0), (0,1), (0,-1)):
             neighbor = (coords[0] + delta_x, coords[1] + delta_y)
             # we don't need to check for getting neighbors out of the maze
