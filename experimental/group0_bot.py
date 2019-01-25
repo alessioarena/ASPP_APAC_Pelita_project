@@ -7,6 +7,8 @@ import enum
 from pelita.utils import Graph
 from utils import *
 import pdb 
+import matplotlib as mp
+import matplotlib.pyplot as plt
 
 TEAM_NAME = 'Group0'
 
@@ -26,6 +28,9 @@ class BotState:
         self.G = Graph(bot.position, bot.walls)
         self.nx_G = walls_to_nxgraph(bot.walls)
         self.target = [None, None]
+        self.enemy_track = [[], []] # for enemy[0] and enemy[1] positions
+        self.enemy_track_noise = [[], []]
+        self.stat_counter = [0, 0] # counter for number of stationaries 
 
 def move_defend(bot, state, was_recur = False):
     '''
@@ -84,7 +89,9 @@ def move_attack(bot, state, was_recur = False):
     next_pos = next_step(bot.position, state.target[bot.turn], state.G)
     
     for enemy in bot.enemy:
-        if (next_pos == enemy.position) and (next_pos not in bot.homezone):
+        if (nx.shortest_path_length(state.nx_G, source = next_pos, target =  enemy.position) < 3)\
+                and (next_pos not in bot.homezone)\
+                and not enemy.is_noisy:
             state.target[bot.turn] = None
             next_pos = bot.track[-2]
             if next_pos == enemy.position:
@@ -95,10 +102,17 @@ def move_attack(bot, state, was_recur = False):
 
 def move(bot, state):
     if state is None:
-            state = BotState(bot, [Mode.attack, Mode.defend])
-
-    print(state.mode)
+        state = BotState(bot, [Mode.attack, Mode.defend])
+    # manually update tracks
+    for i in range(0, len(bot.enemy)):
+        state.enemy_track[i] += [bot.enemy[i].position]
+        state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
+    
     if state.mode[bot.turn] == Mode.defend:
-        return move_defend(bot, state)
+        move, state = move_defend(bot, state)
     else:
-        return move_attack(bot, state)
+        move, state = move_attack(bot, state)
+
+    if move == (0, 0):
+        state.stat_counter[bot.turn]+=1
+    return move, state
