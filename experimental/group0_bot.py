@@ -42,10 +42,10 @@ def move_defend(bot, state, was_recur = False):
     happens when we switch agent modes
     '''
     # if there are two defenders and no enemies, we can become attackers
-    # if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
-    #     if sum([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) < 2:
-    #         state.mode[bot.turn] = Mode.attack
-    #         return move_attack(bot, state, True)
+    if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
+        if sum([bot.enemy[0].is_noisy, bot.enemy[1].is_noisy]) < 2:
+            state.mode[bot.turn] = Mode.attack
+            return move_attack(bot, state, True)
 
     if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
         # both enemies noisy, basically we ignore
@@ -61,7 +61,7 @@ def move_defend(bot, state, was_recur = False):
         next_move = (0, 0)
     else:
         next_move = bot.get_move(next_pos)
-        
+
     if is_stuck(bot):
         print('defender stuck')
         next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
@@ -75,16 +75,16 @@ def move_attack(bot, state, was_recur = False):
     '''
     
     # (TODO) attackers in home territory may become defenders
-    # if bot.position in bot.homezone and not was_recur:
-    #     switch_seek_target = None
-    #     if not bot.enemy[0].is_noisy:
-    #         switch_seek_target = bot.enemy[0].position
-    #     elif not bot.enemy[1].is_noisy:
-    #         switch_seek_target = bot.enemy[1].position
+    if bot.position in bot.homezone and not was_recur:
+        switch_seek_target = None
+        if not bot.enemy[0].is_noisy:
+            switch_seek_target = bot.enemy[0].position
+        elif not bot.enemy[1].is_noisy:
+            switch_seek_target = bot.enemy[1].position
         
-    #     if switch_seek_target != None:
-    #         state.mode[bot.turn] = Mode.defend;
-    #         return move_defend(bot, state, was_recur = True)
+        if switch_seek_target != None:
+            state.mode[bot.turn] = Mode.defend;
+            return move_defend(bot, state, was_recur = True)
 
     # when in attacker mode, we aim for food
     if (state.target[bot.turn] is None) or (state.target[bot.turn] not in bot.enemy[0].food):
