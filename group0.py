@@ -183,6 +183,7 @@ def move_attack(bot, state, was_recur = False):
     
     for enemy in bot.enemy:
         if not enemy.is_noisy:
+            bot.say("Go away.")
             print("ERE")
             food_dist = [nx.shortest_path_length(state.nx_G, source = bot.position, target=i) for i in bot.enemy[0].food]
             enemy_dist = [nx.shortest_path_length(state.nx_G, source = enemy.position, target=i) for i in bot.enemy[0].food]
