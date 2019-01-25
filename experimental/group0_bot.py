@@ -5,7 +5,7 @@ import numpy as np
 import networkx as nx
 import enum
 from pelita.utils import Graph
-from utils import *
+from group0_utils import *
 import pdb 
 import matplotlib as mp
 import matplotlib.pyplot as plt
@@ -26,12 +26,14 @@ class BotState:
     We only get one state for both bots, so the bot-specific state data is stored as 
     list[2]
     '''
-    def __init__(self, bot, modes):
+    def __init__(self, bot, modes, spawning_location):
         self.mode = modes;
         # set up a graph of the map 
-        self.G = Graph(bot.position, bot.walls)
-        self.nx_G = walls_to_nxgraph(bot.walls)
+        self.nx_G = walls_to_nxgraph(bot.walls, bot.homezone)
+        # self.nx_G = walls_to_nxgraph(bot.walls)
         self.target = [None, None]
+        self.spawning = spawning_location
+
         self.enemy_track = [[], []] # for enemy[0] and enemy[1] positions
         self.enemy_track_noise = [[], []]
 
@@ -47,16 +49,43 @@ def move_defend(bot, state, was_recur = False):
             state.mode[bot.turn] = Mode.attack
             return move_attack(bot, state, True)
 
+    # target selection logic
     if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
         # both enemies noisy, basically we ignore
         state.target[bot.turn] = bot.enemy[bot.turn].position
+    
     elif not bot.enemy[bot.turn].is_noisy:
         # pursuit
         state.target[bot.turn] = bot.enemy[bot.turn].position
     elif not bot.enemy[1-bot.turn].is_noisy:
         # pursuit
         state.target[bot.turn] = bot.enemy[1-bot.turn].position
-    next_pos = next_step(bot.position, state.target[bot.turn], state.G)
+
+    # movement logic
+    width = max([coord[0] for coord in bot.walls]) + 1
+    heigth = max([coord[1] for coord in bot.walls]) + 1
+    half_way = int(width / 2)
+    exclusion_zone = [(x, y) for x in range(half_way-2, half_way+2) for y in range(heigth)]
+    # exclusion_zone = list(find_gaps(width, heigth, bot.walls))
+    base = state.spawning
+    # if noisy
+    if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
+        ## if current position in exclusion
+        if bot.position in exclusion_zone:
+            ### next move towards base
+            next_pos = next_step(bot.position, base, state.nx_G)
+        else:
+            ### next move towards enemy
+            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+            ### if next move in exclusion
+            if next_pos in exclusion_zone:
+                #### override with stay
+                next_move = (0, 0)
+    else:
+        ## go for the enemy
+        next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+        bot.say('ATTAAAAAACK!!!!!')
+
     if next_pos in bot.enemy[0].homezone:
         next_move = (0, 0)
     else:
@@ -93,7 +122,7 @@ def move_attack(bot, state, was_recur = False):
         min_dist_idx = np.argmin(food_dist)
         state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
 
-    next_pos = next_step(bot.position, state.target[bot.turn], state.G)
+    next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
     
     for enemy in bot.enemy:
         if (nx.shortest_path_length(state.nx_G, source = next_pos, target =  enemy.position) < 3)\
@@ -109,7 +138,7 @@ def move_attack(bot, state, was_recur = False):
 
 def move(bot, state):
     if state is None:
-        state = BotState(bot, [Mode.attack, Mode.defend])
+        state = BotState(bot, [Mode.attack, Mode.defend], bot.position)
 
     # manually update tracks
     for i in range(0, len(bot.enemy)):
