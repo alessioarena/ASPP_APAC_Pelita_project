@@ -32,7 +32,8 @@ class BotState:
         # self.nx_G = walls_to_nxgraph(bot.walls)
         self.target = [None, None]
         self.spawning = spawning_location
-
+        self.home_boundary_x = 15 if self.spawning[0] <= 15 else 16
+        self.home_boundaries = [boundary for boundary in (set(bot.homezone) - set(bot.walls)) if boundary[0] == self.home_boundary_x]
         self.enemy_track = [[], []] # for enemy[0] and enemy[1] positions
         self.enemy_track_noise = [[], []]
 
@@ -190,7 +191,13 @@ def move_attack(bot, state, was_recur = False):
             if np.max(food_enemy_diff) > 0:
                 min_dist_idx = np.argmax(food_enemy_diff)
                 state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
-                next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)                
+                next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+            else:
+                boundary_dist = [nx.shortest_path_length(state.nx_G, source = bot.position, target=i) for i in state.home_boundaries]
+                enemy_boundary_dist = [nx.shortest_path_length(state.nx_G, source = enemy.position, target=i) for i in state.home_boundaries]
+                boundary_enemy_diff = np.array(enemy_boundary_dist) - np.array(boundary_dist)
+                min_dist_idx = np.argmin(boundary_dist)
+                next_pos = next_step(bot.position, state.home_boundaries[min_dist_idx], state.nx_G)    
         if next_pos == enemy.position:
             state.target[bot.turn] = None
             next_pos = bot.track[-2]
