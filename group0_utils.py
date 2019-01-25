@@ -3,6 +3,16 @@
 # pyximport.install(build_in_temp=True)
 # import c_utils
 import networkx
+import numpy as np
+
+def closest_position(bot_position, target_positions, graph):
+    # iterate through targets and calculate path lenghts
+    all_distances = []
+    for target in target_positions:
+        all_distances.append(networkx.shortest_path_length(graph, bot_position, target, weight='homebase'))
+
+    # returning the index of the closest target
+    return np.argmin(all_distances)
 
 
 def next_step(bot_position, target_position, graph):
