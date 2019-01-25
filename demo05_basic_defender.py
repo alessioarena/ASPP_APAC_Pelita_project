@@ -12,7 +12,7 @@ from pelita.utils import Graph
 from utils import next_step
 
 def move(bot, state):
-
+#    import pdb; pdb.set_trace()
     if state is None:
         # initialize the state object to be a graph representation of the maze
         state = Graph(bot.position, bot.walls)
