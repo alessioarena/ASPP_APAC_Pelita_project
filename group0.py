@@ -157,18 +157,30 @@ def move_attack(bot, state, was_recur = False):
     happens when we switch agent modes
     '''
 
-    if (bot.position in bot.homezone) \
-        and not was_recur:
+    if bot.position in bot.homezone and not was_recur:
         switch_seek_target = None
-        if bot.enemy[0].position in bot.homezone:
+        if not bot.enemy[0].is_noisy:
             switch_seek_target = bot.enemy[0].position
-        elif bot.enemy[1].position in bot.homezone:
+        elif not bot.enemy[1].is_noisy:
             switch_seek_target = bot.enemy[1].position
         
         if switch_seek_target != None:
             state.mode[bot.turn] = Mode.defend
             print(state.mode)
             return move_defend(bot, state, was_recur = True)
+
+    # if (bot.position in bot.homezone) \
+    #     and not was_recur:
+    #     switch_seek_target = None
+    #     if bot.enemy[0].position in bot.homezone:
+    #         switch_seek_target = bot.enemy[0].position
+    #     elif bot.enemy[1].position in bot.homezone:
+    #         switch_seek_target = bot.enemy[1].position
+        
+    #     if switch_seek_target != None:
+    #         state.mode[bot.turn] = Mode.defend
+    #         print(state.mode)
+    #         return move_defend(bot, state, was_recur = True)
     
     if (state.target[bot.turn] is None) or (state.target[bot.turn] not in bot.enemy[0].food):
         # find new food target with minimal distance to agent
@@ -220,7 +232,6 @@ def move_attack(bot, state, was_recur = False):
             next_pos = bot.track[-2]
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
-
     if is_stuck(bot):
         print('attacker stuck')
         next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
