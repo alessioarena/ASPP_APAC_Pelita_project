@@ -223,8 +223,8 @@ def score_checking(bot, state):
     '''Check current scores and food left to modify if we need to focus on attack or defense.'''
     own_score = bot.score
     enemy_score = bot.enemy[0].score
-    food_for_us = len(bot.food)
-    food_for_them = len(bot.enemy[0].food)
+    food_for_us = len(bot.enemy[0].food)
+    food_for_them = len(bot.food)
     winning = own_score > enemy_score
     if winning:
         # If we are winning and have nearly no food left, race to finish it (prevent attack bot from turning defensive
