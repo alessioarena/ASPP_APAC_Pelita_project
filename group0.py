@@ -18,7 +18,7 @@ class Mode(enum.Enum):
     attack = 1
 
 def is_stuck(bot):
-    return (len(bot.track) > 4) and (len(set(bot.track[-3:])) <= 2)
+    return (len(bot.track) > 5) and (len(set(bot.track[-5:])) <= 2)
     
 
 class BotState:
@@ -91,9 +91,9 @@ def move_defend(bot, state, was_recur = False):
     else:
         next_move = bot.get_move(next_pos)
 
-    # if is_stuck(bot):
-    #     print('defender stuck')
-    #     next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+    if is_stuck(bot):
+        print('defender stuck')
+        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
     return next_move, state
 
 def move_attack(bot, state, was_recur = False):
@@ -122,14 +122,16 @@ def move_attack(bot, state, was_recur = False):
         min_dist_idx = np.argmin(food_dist)
         state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
 
+    if is_stuck(bot):
+        print('attacker stuck')
+        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+
     next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
     
     for enemy in bot.enemy:
-        if (nx.shortest_path_length(state.nx_G, source = next_pos, target =  enemy.position) < 3)\
-                and (next_pos not in bot.homezone)\
-                and not enemy.is_noisy:
-            state.target[bot.bot_turn] = bot.spawning
-            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+        if next_pos == enemy.position:
+            state.target[bot.bot_turn] = None
+            next_pos = bot.track[-2]
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
 
