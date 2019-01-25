@@ -57,7 +57,6 @@ def move_defend(bot, state, was_recur = False):
             print(state.mode)
             return move_attack(bot, state, True)
 
-
     closest = closest_position(bot.position, (bot.enemy[0].position, bot.enemy[1].position), state.nx_G)
 
     # target selection logic
@@ -67,12 +66,22 @@ def move_defend(bot, state, was_recur = False):
             ## select bot 0 if bot 1 is noisy (and therefore bot 0 is not)
             state.target[bot.turn] = bot.enemy[0].position if noisy_e1 else bot.enemy[1].position
         else:
+            ## go to the closest
             state.target[bot.turn] = bot.enemy[closest].position
     elif homezone_e0 + homezone_e1 == 1:
         ## select the one in the homezone
         state.target[bot.turn] = bot.enemy[0].position if homezone_e0 else bot.enemy[1].position
     else:
-        state.target[bot.turn] = bot.enemy[closest].position
+        ## No one to be seen
+        ## find out who is closer
+        closer_to_enemy = closest_position(bot.enemy[closest].position, (bot.other.position, bot.position), state.nx_G)
+        if closer_to_enemy:
+            # you are closer, you should go
+            state.target[bot.turn] = bot.enemy[closest].position
+        else:
+            # the other will deal with it
+            state.target[bot.turn] = bot.enemy[1 - closest].position
+
 
     # if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
     #     # both enemies noisy, basically we ignore
@@ -89,26 +98,40 @@ def move_defend(bot, state, was_recur = False):
     width = max([coord[0] for coord in bot.walls]) + 1
     heigth = max([coord[1] for coord in bot.walls]) + 1
     half_way = int(width / 2)
-    exclusion_zone = [(x, y) for x in range(half_way-2, half_way+2) for y in range(heigth)]
-    # exclusion_zone = list(find_gaps(width, heigth, bot.walls))
-    base = state.spawning
+    middle_y = int(heigth / 2)
+    # exclusion_zone = [(x, y) for x in range(half_way-2, half_way+2) for y in range(heigth)]
+    exclusion_zone = list(range(half_way-2, half_way+2))
+    
+    base = (state.spawning[0], middle_y)
+    # if this is a wall, no path will lead to that
+    if base in bot.walls:
+        # fallback to the spawning point
+        base = state.spawning
     # if noisy
     if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
         ## if current position in exclusion
-        if bot.position in exclusion_zone:
-            ### next move towards base
-            next_pos = next_step(bot.position, base, state.nx_G)
+        if bot.position[0] in exclusion_zone:
+            ### find the side you are on and look behind you
+            corners = [(-1,1), (-1, -1)] if base[0] < half_way else [(1,1), (1,-1)]
+            maybe_walls = [(bot.position[0] + x, bot.position[1] + y) for x,y in corners]
+            ### the bot is trying to get around corners
+            if any([w in bot.walls for w in maybe_walls]):
+                ### move towards target
+                next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+            else:
+                ### next move towards base
+                next_pos = next_step(bot.position, base, state.nx_G)
         else:
             ### next move towards enemy
             next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
             ### if next move in exclusion
-            if next_pos in exclusion_zone:
-                #### override with stay
-                next_move = (0, 0)
+            # if next_pos in exclusion_zone:
+            #     #### override with stay
+            #     next_move = (0, 0)
     else:
         if state.target[bot.turn] not in bot.homezone:
             next_pos = next_step(bot.position, base, state.nx_G)
-            bot.say('Retreat!')
+            bot.say('Come here if you dare!')
         else:
             ## go for the enemy
             next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
@@ -189,6 +212,7 @@ def move(bot, state):
         else:
             move, state = move_attack(bot, state)
     except:
+        bot.say('Exception!')
         return (bot.random.choice(bot.legal_moves), state)
     else:
         return move, state
