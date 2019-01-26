@@ -19,4 +19,6 @@ def move(bot, state):
         next_move, state_attacker = move_attacker(bot, state['attacker'])
         state['attacker'] = state_attacker
 
+    bot.say('bot '+str(bot.turn))
+
     return next_move, state

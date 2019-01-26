@@ -16,13 +16,16 @@ def closest_position(bot_position, target_positions, graph):
 
 
 def next_step(bot_position, target_position, graph):
-    # import pdb; pdb.set_trace()
+#    import pdb; pdb.set_trace()
     """Given a graph representation of the maze, return the next position
     in the (shortest-)path to target_position.
 
     The shortest path is computed on the graph using the a-star algorithm"""
-    return networkx.shortest_path(graph, bot_position, target_position, weight="weight")[1]
-
+    short_path = networkx.shortest_path(graph, bot_position, target_position, weight="weight")
+    if len(short_path)>1:
+        return short_path[1]
+    else:
+        return short_path[0]
 
 def update_with_enemies(enemy_positions, graph):
     ## utility to get the new position

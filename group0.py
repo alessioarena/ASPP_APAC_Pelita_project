@@ -41,6 +41,35 @@ class BotState:
         self.homezone_enembound = [(15, i) for i in range(0, 16)] if bot.is_blue else [(16, i) for i in range(0, 16)]
         self.homezone_enembound = [i for i in self.homezone_enembound if not i in bot.walls]
 
+    def enemy_track_update(self, bot):
+        for i in range(0, 2):
+            self.enemy_track[bot.turn][i] += [bot.enemy[i].position, ]
+            self.enemy_track_noise[bot.turn][i] += [bot.enemy[i].is_noisy, ]
+
+    def enemy_track_flush(self, bot, enemy_idx):
+        for i in enemy_idx:
+            for j in range(0, 2):
+                self.enemy_track[j][i] = [bot.enemy[i].position, ]
+                self.enemy_track_noise[j][i] = [bot.enemy[i].is_noisy, ]
+
+    def enemy_check_kill(self, bot, new_pos): # check if an enemy has been killed in our homezone
+        killed = []
+        for i in range(0, 2):
+            if not bot.enemy[i].is_noisy and bot.enemy[i].position == new_pos\
+                and new_pos in bot.homezone:
+                killed+=[i, ]
+        return killed
+
+    def get_enemy_pos(self, bot, enemy_idx):
+        # call AFTER enemy_track_update for latest information
+        if not self.enemy_track_noise[bot.turn][enemy_idx]:
+            # if not noisy, return own information
+            return (self.enemy_track[bot.turn][enemy_idx], False)
+        elif not self.enemy_track_noise[1-bot.turn][enemy_idx]:
+            return (self.enemy_track[1-bot.turn][enemy_idx], False)
+        else:
+            return (self.enemy_track[bot.turn][enemy_idx], True)
+
 def move_defend(bot, state, was_recur = False):
     '''
     move routine for defend.
@@ -57,7 +86,6 @@ def move_defend(bot, state, was_recur = False):
     if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
         if not any([homezone_e0, homezone_e1]):
             state.mode[bot.turn] = Mode.attack
-            print(state.mode)
             return move_attack(bot, state, True)
 
     closest = closest_position(bot.position, (bot.enemy[0].position, bot.enemy[1].position), state.nx_G)
@@ -133,8 +161,13 @@ def move_defend(bot, state, was_recur = False):
         next_move = bot.get_move(next_pos)
 
     if is_stuck(bot):
+<<<<<<< HEAD
         print('defender stuck')
         next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) in bot.homezone])
+=======
+        # print('defender stuck')
+        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+>>>>>>> aa7dcfbefe3636faf47764f5bb4cbf937b024f77
     return next_move, state
 
 def move_attack(bot, state, was_recur = False):
@@ -153,7 +186,6 @@ def move_attack(bot, state, was_recur = False):
         
         if switch_seek_target != None:
             state.mode[bot.turn] = Mode.defend
-            print(state.mode)
             return move_defend(bot, state, was_recur = True)
 
     graph_with_enemies = update_with_enemies((bot.enemy[0].position, bot.enemy[1].position), state.nx_G)
@@ -222,10 +254,16 @@ def move_attack(bot, state, was_recur = False):
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
 
+<<<<<<< HEAD
 
     # if is_stuck(bot):
     #     print('attacker stuck')
     #     next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+=======
+    if is_stuck(bot):
+        # print('attacker stuck')
+        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
+>>>>>>> aa7dcfbefe3636faf47764f5bb4cbf937b024f77
 
     next_move = bot.get_move(next_pos)
     return next_move, state
@@ -235,6 +273,7 @@ def move(bot, state):
     if state is None:
         state = BotState(bot, [Mode.defend, Mode.attack], bot.position)
 
+<<<<<<< HEAD
     # manually update tracks
     for i in range(0, len(bot.enemy)):
         state.enemy_track[i] += [bot.enemy[i].position]
@@ -252,6 +291,33 @@ def move(bot, state):
     #     bot.say('Exception!')
     #     return (bot.random.choice(bot.legal_moves), state)
     # else:
+=======
+        state.enemy_track_update(bot)
+
+        # print optimal info
+        print('------')
+        print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0)[-1])
+        print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1)[-1])
+        print('------')
+
+        score_checking(bot, state)
+        if state.mode[bot.turn] == Mode.defend:
+            move, state = move_defend(bot, state)
+        else:
+            move, state = move_attack(bot, state)
+    except:
+        bot.say('Exception!')
+        move = bot.random.choice(bot.legal_moves)
+    else:
+        pass
+    
+    # broadcast id
+    bot.say('bot '+str(bot.turn))
+
+    # check for kill
+    state.enemy_track_flush(bot, state.enemy_check_kill(bot, bot.get_position(move)))
+
+>>>>>>> aa7dcfbefe3636faf47764f5bb4cbf937b024f77
     return move, state
 
 def score_checking(bot, state):
