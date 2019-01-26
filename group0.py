@@ -26,7 +26,7 @@ class BotState:
     list[2]
     '''
     def __init__(self, bot, modes, spawning_location):
-        self.mode = modes;
+        self.mode = modes
         # set up a graph of the map 
         self.nx_G = walls_to_nxgraph(bot.walls, bot.homezone)
         # self.nx_G = walls_to_nxgraph(bot.walls)
@@ -34,8 +34,8 @@ class BotState:
         self.spawning = spawning_location
         self.home_boundary_x = 15 if self.spawning[0] <= 15 else 16
         self.home_boundaries = [boundary for boundary in (set(bot.homezone) - set(bot.walls)) if boundary[0] == self.home_boundary_x]
-        self.enemy_track = [[], []] # for enemy[0] and enemy[1] positions
-        self.enemy_track_noise = [[], []]
+        self.enemy_track = [[[], []], [[], []]] # enemy_track[0][1] is the list of positions of enemy[1] as seen by bot[0]
+        self.enemy_track_noise = [[[], []], [[], []]] # same but for noise flags
 
         # enemy cells around the homezone boundary
         self.homezone_enembound = [(15, i) for i in range(0, 16)] if bot.is_blue else [(16, i) for i in range(0, 16)]
@@ -54,7 +54,6 @@ def move_defend(bot, state, was_recur = False):
     homezone_e1 = bot.enemy[1].position in bot.homezone
 
     # if there are two defenders and no enemies, we can become attackers
-
     if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
         if not any([homezone_e0, homezone_e1]):
             state.mode[bot.turn] = Mode.attack
@@ -85,18 +84,6 @@ def move_defend(bot, state, was_recur = False):
         else:
             # the other will deal with it
             state.target[bot.turn] = bot.enemy[1 - closest].position
-
-
-    # if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
-    #     # both enemies noisy, basically we ignore
-    #     state.target[bot.turn] = bot.enemy[bot.turn].position
-    
-    # elif not bot.enemy[bot.turn].is_noisy:
-    #     # pursuit
-    #     state.target[bot.turn] = bot.enemy[bot.turn].position
-    # elif not bot.enemy[1-bot.turn].is_noisy:
-    #     # pursuit
-    #     state.target[bot.turn] = bot.enemy[1-bot.turn].position
 
     # movement logic
     width = max([coord[0] for coord in bot.walls]) + 1
@@ -189,28 +176,29 @@ def move_attack(bot, state, was_recur = False):
         state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
 
     next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+
 # <<<<<<< HEAD
-#     enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else [] 
-#     enemy_dists = [nx.shortest_path_length(state.nx_G, source = next_pos, target = j) for j in enemy_pos] #\
-#                 # if not bot.position in bot.homezone else []
+    # enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else [] 
+    # enemy_dists = [nx.shortest_path_length(state.nx_G, source = next_pos, target = j) for j in enemy_pos] #\
+    #             # if not bot.position in bot.homezone else []
 
-#     bad_steps = []
-#     for i in range(0, len(enemy_pos)):
-#         if enemy_dists[i] < 4:
-#             # enemy is visible
-#             bad_steps += [bot.get_move(next_step(bot.position, enemy_pos[i], state.nx_G)), ]
+    # bad_steps = []
+    # for i in range(0, len(enemy_pos)):
+    #     if enemy_dists[i] < 4:
+    #         # enemy is visible
+    #         bad_steps += [bot.get_move(next_step(bot.position, enemy_pos[i], state.nx_G)), ]
 
-#     if len(bad_steps) > 0:
-#         bad_steps += [bot.get_move(bot.track[-2]), (0, 0)]
-#         bad_steps += [i for i in bot.legal_moves for j in range(0, len(enemy_pos)) \
-#                         if nx.shortest_path_length(state.nx_G, source = bot.get_position(i), target = enemy_pos[j]) <= 1]
-#         try:
-#             next_pos = bot.get_position(bot.random.choice([i for i in bot.legal_moves if not i in bad_steps]))
-#         except:
-#             # no possible moves! give up and die
-#             next_pos = bot.position
+    # if len(bad_steps) > 0:
+    #     bad_steps += [bot.get_move(bot.track[-2]), (0, 0)]
+    #     bad_steps += [i for i in bot.legal_moves for j in range(0, len(enemy_pos)) \
+    #                     if nx.shortest_path_length(state.nx_G, source = bot.get_position(i), target = enemy_pos[j]) <= 1]
+    #     try:
+    #         next_pos = bot.get_position(bot.random.choice([i for i in bot.legal_moves if not i in bad_steps]))
+    #     except:
+    #         # no possible moves! give up and die
+    #         print('Give up')
+    #         next_pos = bot.position
 # =======
-    
     for enemy in bot.enemy:
         if not enemy.is_noisy:
             bot.say("Go away.")
@@ -232,6 +220,7 @@ def move_attack(bot, state, was_recur = False):
             next_pos = bot.track[-2]
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
+
     if is_stuck(bot):
         print('attacker stuck')
         next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
