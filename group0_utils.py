@@ -27,6 +27,63 @@ def next_step(bot_position, target_position, graph):
     else:
         return short_path[0]
 
+def update_with_enemies(enemy_positions, graph):
+    ## utility to get the new position
+    def find_new_position(original, move):
+        return (original[0] + move[0], original[1] + move[1])
+    ## utility to update the weight based on multiplier
+    def update_weight(graph, previous_graph, position, weight_multiplier):
+        try:
+            if previous_graph.nodes[position]['weight'] > 10:
+                graph.nodes[position]['weight'] = previous_graph.nodes[position]['weight'] * weight_multiplier
+        except KeyError:
+            ## the target node does not exist
+            pass
+        return
+    # Let's make a copy
+    updated_graph = graph.copy()
+    # possible moves
+    moves = [(1, 0), (-1, 0), (0, 1), (0,-1)]
+    for enemy in enemy_positions:
+        for m1 in moves:
+            # here we look at round +1 moves
+            pos1 = find_new_position(enemy, m1)
+            for m2 in moves:
+                # here we look at round +2 moves
+                pos2 = find_new_position(pos1, m1)
+                for m3 in moves:
+                    # here we look at round +3 moves
+                    pos3 = find_new_position(pos2, m1)
+                    ## cascade update to not overwrite previous changes (round+1 has priority over round=2 and so on)
+                    update_weight(updated_graph, graph, pos3, 2)
+                update_weight(updated_graph, graph, pos2, 5)
+            update_weight(updated_graph, graph, pos1, 10)
+        update_weight(updated_graph, graph, enemy, 30)
+    return updated_graph
+
+
+# def inspect_updated(enemy_positions, graph):
+#     def find_new_position(original, move):
+#         return (original[0] + move[0], original[1] + move[1])
+#     def update_node(graph, position, weight_multiplier):
+#         try:
+#             print(position, graph.nodes[position]['weight'])
+#         except KeyError:
+#             pass
+#         return
+#     updated_graph = graph.copy()
+#     moves = [(1, 0), (-1, 0), (0, 1), (0,-1)]
+#     for m1 in moves:
+#         pos1 = find_new_position(enemy_positions, m1)
+#         update_node(updated_graph, pos1, 10)
+#         for m2 in moves:
+#             pos2 = find_new_position(pos1, m1)
+#             update_node(updated_graph, pos2, 5)
+#             for m3 in moves:
+#                 pos3 = find_new_position(pos2, m1)
+#                 update_node(updated_graph, pos3, 2)
+#     return
+
 def find_gaps(width, heigth, walls):
     for x in range(width):
         for y in range(heigth):
@@ -49,9 +106,11 @@ def walls_to_nxgraph(walls, homezone=None):
         # you are starting on the left
     for coords in find_gaps(width, heigth, walls):
         if coords not in homezone or coords in exclusion:
-            graph.add_node(coords, weight=500)
+            graph.add_node(coords, weight=100)
+        if coords in exclusion:
+            graph.add_node(coords, weight=10)
         else:
-            graph.add_node(coords, weight=coords[0])
+            graph.add_node(coords, weight=1)
         for delta_x, delta_y in ((1,0), (-1,0), (0,1), (0,-1)):
             neighbor = (coords[0] + delta_x, coords[1] + delta_y)
             # we don't need to check for getting neighbors out of the maze

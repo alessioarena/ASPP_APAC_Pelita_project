@@ -2,6 +2,7 @@ import pytest
 
 from pelita.utils import create_layout
 import utils
+import group0_utils
 
 def test_walls_to_nx_graph_full():
     # skip the test if networkx is not installed
@@ -49,4 +50,31 @@ def test_walls_to_nx_graph_impossible():
     l = create_layout(layout)
     graph = utils.walls_to_nxgraph(l.walls)
     assert networkx.has_path(graph, (1,1), (6,1)) is False
+
+def test_weighted_graph():
+    layout = """
+    ################################
+    #    #                        1#
+    #       ###### ##   ##### ## #0#
+    #            # ##   #  #   #   #
+    # # ##       #             # # #
+    # #  #### ##      ########   # #
+    #                      #     # #
+    ## ######  ## ###          #   #
+    #   #          ### ##  ###### ##
+    #E#     #                      #
+    # #E  ########      ## ####  # #
+    # # #             #       ## # #
+    #   #   #  #   ## #            #
+    # # ## #####   ## ######       #
+    #                         #    #
+    ################################
+    """
+    l = create_layout(layout)
+    width = max([coord[0] for coord in l.walls]) + 1
+    heigth = max([coord[1] for coord in l.walls]) + 1
+    half_way = int(width / 2)
+    homezone = [(x, y) for x in range(half_way) for y in range(heigth)]
+
+    graph = group0_utils.walls_to_nxgraph(l.walls, homezone)
 
