@@ -5,7 +5,7 @@ import numpy as np
 import networkx as nx
 import enum
 from pelita.utils import Graph
-from group0_utils import *
+from group0_utils_alessio import *
 import matplotlib as mp
 import matplotlib.pyplot as plt
 from operator import sub
@@ -184,7 +184,8 @@ def move_attack(bot, state, was_recur = False):
             state.mode[bot.turn] = Mode.defend
             return move_defend(bot, state, was_recur = True)
 
-    graph_with_enemies = update_with_enemies((bot.enemy[0].position, bot.enemy[1].position), state.nx_G)
+    graph_with_enemies = state.nx_G
+    # graph_with_enemies = update_with_enemies((bot.enemy[0].position, bot.enemy[1].position), state.nx_G)
     # if (bot.position in bot.homezone) \
     #     and not was_recur:
     #     switch_seek_target = None
@@ -200,7 +201,7 @@ def move_attack(bot, state, was_recur = False):
     
     if (state.target[bot.turn] is None) or (state.target[bot.turn] not in bot.enemy[0].food):
         # find new food target with minimal distance to agent
-        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in bot.enemy[0].food]
+        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i, weight="weight") for i in bot.enemy[0].food]
         min_dist_idx = np.argmin(food_dist)
         state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
 
@@ -231,41 +232,53 @@ def move_attack(bot, state, was_recur = False):
 
 
     # for enemy in bot.enemy:
-    if all(enemy_nearby) and not bot.position in bot.homezone:
-        bot.say("Go away.")
-        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in bot.enemy[0].food]
-        enemy_0_food_dist = [nx.shortest_path_length(state.nx_G, source = bot.enemy[0].position, target=i) for i in bot.enemy[0].food]
-        enemy_1_food_dist = [nx.shortest_path_length(state.nx_G, source = bot.enemy[1].position, target=i) for i in bot.enemy[0].food]
+    if all(enemy_nearby):
+        bot.say("HEEEEEELLLLPP!!!")
+        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i, weight="weight") for i in bot.enemy[0].food]
+        enemy_0_food_dist = [nx.shortest_path_length(state.nx_G, source = bot.enemy[0].position, target=i, weight="weight") for i in bot.enemy[0].food]
+        enemy_1_food_dist = [nx.shortest_path_length(state.nx_G, source = bot.enemy[1].position, target=i, weight="weight") for i in bot.enemy[0].food]
         enemy_food_dist = list(map(min, enemy_0_food_dist, enemy_1_food_dist))
         food_enemy_diff = list(map(sub, enemy_food_dist, food_dist))
-        if np.max(food_enemy_diff) > 0:
-            min_dist_idx = np.argmax(food_enemy_diff)
-            state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
-            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
-        else:
-            boundary_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in state.home_boundaries]
-            enemy_0_boundary_dist = [nx.shortest_path_length(state.nx_G, source = bot.enemy[0].position, target=i) for i in state.home_boundaries]
-            enemy_1_boundary_dist = [nx.shortest_path_length(state.nx_G, source = bot.enemy[1].position, target=i) for i in state.home_boundaries]
+        if np.max(food_enemy_diff) < 0 and not bot.position in bot.homezone:
+            boundary_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i, weight="weight") for i in state.home_boundaries]
+            enemy_0_boundary_dist = [nx.shortest_path_length(state.nx_G, source = bot.enemy[0].position, target=i, weight="weight") for i in state.home_boundaries]
+            enemy_1_boundary_dist = [nx.shortest_path_length(state.nx_G, source = bot.enemy[1].position, target=i, weight="weight") for i in state.home_boundaries]
             enemy_boundary_dist = list(map(min, enemy_0_boundary_dist, enemy_1_boundary_dist))
             boundary_enemy_diff = list(map(sub, enemy_boundary_dist, boundary_dist))
             min_dist_idx = np.argmax(boundary_enemy_diff)
             next_pos = next_step(bot.position, state.home_boundaries[min_dist_idx], state.nx_G)
-    elif any(enemy_nearby) and not bot.position in bot.homezone:
-        enemy = bot.enemy[np.argmax(enemy_nearby)]
-        bot.say("Go away.")
-        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in bot.enemy[0].food]
-        enemy_dist = [nx.shortest_path_length(state.nx_G, source = enemy.position, target=i) for i in bot.enemy[0].food]
-        food_enemy_diff = np.array(enemy_dist) - np.array(food_dist)
-        if np.max(food_enemy_diff) > 0:
+        else:
             min_dist_idx = np.argmax(food_enemy_diff)
             state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
             next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
-        else:
-            boundary_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in state.home_boundaries]
-            enemy_boundary_dist = [nx.shortest_path_length(state.nx_G, source = enemy.position, target=i) for i in state.home_boundaries]
-            boundary_enemy_diff = np.array(enemy_boundary_dist) - np.array(boundary_dist)
+    else:
+        enemy = bot.enemy[np.argmax(enemy_nearby)]
+        bot.say("AHAHAHAHAH!".format(np.argmax(enemy_nearby)))
+        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i, weight="weight") for i in bot.enemy[0].food]
+        enemy_dist = [nx.shortest_path_length(state.nx_G, source = enemy.position, target=i, weight="weight") for i in bot.enemy[0].food]
+        food_enemy_diff = list(map(sub, enemy_dist, food_dist))
+        if np.max(food_enemy_diff) < 0 and not bot.position in bot.homezone:
+            bot.say("Go away BOT {0}!".format(np.argmax(enemy_nearby)))
+            boundary_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i, weight="weight") for i in state.home_boundaries]
+            enemy_boundary_dist = [nx.shortest_path_length(state.nx_G, source = enemy.position, target=i, weight="weight") for i in state.home_boundaries]
+            boundary_enemy_diff = list(map(sub, enemy_boundary_dist, boundary_dist))
             min_dist_idx = np.argmax(boundary_enemy_diff)
-            next_pos = next_step(bot.position, state.home_boundaries[min_dist_idx], state.nx_G)    
+            next_pos = next_step(bot.position, state.home_boundaries[min_dist_idx], state.nx_G)
+        else:
+            min_dist_idx = np.argmax(food_enemy_diff)
+            state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
+            print(bot.enemy[0].food[min_dist_idx])
+            # bot.say('going for {0}'.format(state.target[bot.turn]))
+            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+    # else:
+    #     bot.say('no one around')
+    #     food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i, weight="weight") for i in bot.enemy[0].food]
+    #     min_dist_idx = np.argmin(food_dist)
+    #     state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
+    #     print(bot.enemy[0].food[min_dist_idx])
+    #     next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+
+
     # if next_pos == enemy.position:
     #     state.target[bot.turn] = None
     #     next_pos = bot.track[-2]
@@ -288,10 +301,10 @@ def move(bot, state):
     state.enemy_track_update(bot)
 
     # print optimal info
-    print('------')
-    print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0)[-1])
-    print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1)[-1])
-    print('------')
+    # print('------')
+    # print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0)[-1])
+    # print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1)[-1])
+    # print('------')
 
     score_checking(bot, state)
     if state.mode[bot.turn] == Mode.defend:
@@ -305,7 +318,7 @@ def move(bot, state):
     #     pass
     
     # broadcast id
-    bot.say('bot '+str(bot.turn))
+    # bot.say('bot '+str(bot.turn))
 
     # check for kill
     state.enemy_track_flush(bot, state.enemy_check_kill(bot, bot.get_position(move)))
