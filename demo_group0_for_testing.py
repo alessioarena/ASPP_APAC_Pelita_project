@@ -1,11 +1,11 @@
-""" Team Bot Implementation 
+""" Team Bot Implementation
 """
 
 import numpy as np
 import networkx as nx
 import enum
 from pelita.utils import Graph
-from group0_utils_alessio import *
+from group0_utils import *
 import matplotlib as mp
 import matplotlib.pyplot as plt
 from operator import sub
@@ -24,12 +24,12 @@ def is_stuck(bot):
 
 class BotState:
     '''
-    We only get one state for both bots, so the bot-specific state data is stored as 
+    We only get one state for both bots, so the bot-specific state data is stored as
     list[2]
     '''
     def __init__(self, bot, modes, spawning_location):
         self.mode = modes
-        # set up a graph of the map 
+        # set up a graph of the map
         self.nx_G = walls_to_nxgraph(bot.walls, bot.homezone)
         # self.nx_G = walls_to_nxgraph(bot.walls)
         self.target = [None, None]
@@ -82,11 +82,11 @@ class BotState:
 def move_defend(bot, state, was_recur = False):
     '''
     move routine for defend.
-    was_recur indicates whether this was called from within another move routine. This 
+    was_recur indicates whether this was called from within another move routine. This
     happens when we switch agent modes
     '''
-    noisy_e0 = state.get_enemy_noise(bot, 0) 
-    noisy_e1 = state.get_enemy_noise(bot, 1) 
+    noisy_e0 = state.get_enemy_noise(bot, 0)
+    noisy_e1 = state.get_enemy_noise(bot, 1)
 
     homezone_e0 = state.get_enemy_pos(bot, 0) in bot.homezone
     homezone_e1 = state.get_enemy_pos(bot, 1) in bot.homezone
@@ -104,13 +104,13 @@ def move_defend(bot, state, was_recur = False):
     if all([homezone_e0, homezone_e1]):
         if noisy_e0 + noisy_e1 == 1:
             ## select bot 0 if bot 1 is noisy (and therefore bot 0 is not)
-            state.target[bot.turn] = state.get_enemy_pos(bot, 0) if noisy_e1 else state.get_enemy_pos(bot, 1) 
+            state.target[bot.turn] = state.get_enemy_pos(bot, 0) if noisy_e1 else state.get_enemy_pos(bot, 1)
         else:
             ## go to the closest
             state.target[bot.turn] = bot.enemy[closest].position
     elif homezone_e0 + homezone_e1 == 1:
         ## select the one in the homezone
-        state.target[bot.turn] = state.get_enemy_pos(bot, 0) if homezone_e0 else state.get_enemy_pos(bot, 1) 
+        state.target[bot.turn] = state.get_enemy_pos(bot, 0) if homezone_e0 else state.get_enemy_pos(bot, 1)
     else:
         ## No one to be seen
         ## find out who is closer
@@ -129,7 +129,7 @@ def move_defend(bot, state, was_recur = False):
     middle_y = int(heigth / 2)
     # exclusion_zone = [(x, y) for x in range(half_way-2, half_way+2) for y in range(heigth)]
     exclusion_zone = list(range(half_way-2, half_way+2))
-    
+
     base = (state.spawning[0], middle_y)
     # if this is a wall, no path will lead to that
     if base in bot.walls:
@@ -162,7 +162,7 @@ def move_defend(bot, state, was_recur = False):
             bot.say('Come here if you dare!')
         else:
             ## go for the enemy
-            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G) 
+            next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
             bot.say('ATTAAAAAACK!!!!!')
     if next_pos in bot.enemy[0].homezone:
         next_move = (0, 0)
@@ -177,17 +177,17 @@ def move_defend(bot, state, was_recur = False):
 def move_attack(bot, state, was_recur = False):
     '''
     move routine for attack.
-    was_recur indicates whether this was called from within another move routine. This 
+    was_recur indicates whether this was called from within another move routine. This
     happens when we switch agent modes
     '''
 # need below for natalies code
     # if bot.position in bot.homezone and not was_recur:
     #     switch_seek_target = None
     #     if not state.get_enemy_noise(bot, 0) and state.get_enemy_pos(bot, 0) in bot.homezone:
-    #         switch_seek_target = state.get_enemy_pos(bot, 0) 
+    #         switch_seek_target = state.get_enemy_pos(bot, 0)
     #     elif not state.get_enemy_noise(bot, 1) and state.get_enemy_pos(bot, 1) in bot.homezone:
     #         switch_seek_target = state.get_enemy_pos(bot, 1)
-        
+
     #     if switch_seek_target != None:
     #         state.mode[bot.turn] = Mode.defend
     #         return move_defend(bot, state, was_recur = True)
@@ -202,22 +202,22 @@ def move_attack(bot, state, was_recur = False):
             switch_seek_target = bot.enemy[0].position
         elif bot.enemy[1].position in bot.homezone:
             switch_seek_target = bot.enemy[1].position
-        
+
         if switch_seek_target != None:
             state.mode[bot.turn] = Mode.defend
             print(state.mode)
             return move_defend(bot, state, was_recur = True)
-    
+
     if (state.target[bot.turn] is None) or (state.target[bot.turn] not in bot.enemy[0].food):
         # find new food target with minimal distance to agent
-        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i, weight="weight") for i in bot.enemy[0].food]
+        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in bot.enemy[0].food]
         min_dist_idx = np.argmin(food_dist)
         state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
 
     next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
 
 # Stephen's implementation
-    enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else [] 
+    enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else []
     enemy_dists = [nx.shortest_path_length(state.nx_G, source = next_pos, target = j) for j in enemy_pos] #\
                 # if not bot.position in bot.homezone else []
 
@@ -276,7 +276,7 @@ def move_attack(bot, state, was_recur = False):
     #         enemy_boundary_dist = [nx.shortest_path_length(state.nx_G, source = enemy.position, target=i) for i in state.home_boundaries]
     #         boundary_enemy_diff = np.array(enemy_boundary_dist) - np.array(boundary_dist)
     #         min_dist_idx = np.argmax(boundary_enemy_diff)
-    #         next_pos = next_step(bot.position, state.home_boundaries[min_dist_idx], state.nx_G)    
+    #         next_pos = next_step(bot.position, state.home_boundaries[min_dist_idx], state.nx_G)
 
     # if next_pos == enemy.position:
     #     state.target[bot.turn] = None
@@ -321,7 +321,7 @@ def move(bot, state):
         pass
 
     # broadcast id
-    # bot.say('bot '+str(bot.turn))
+    bot.say('bot '+str(bot.turn))
 
     # check for kill
     state.enemy_track_flush(bot, state.enemy_check_kill(bot, bot.get_position(move)))
@@ -342,7 +342,7 @@ def score_checking(bot, state, k = 5):
             # Attack!
             state.mode[0] = Mode.attack
             state.mode[1] = Mode.attack
-            return state            
+            return state
         # If we are winning and enemy has nearly no food left, continue as we are to maximise score
         if food_for_them <= k:
             return state
