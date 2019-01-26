@@ -287,7 +287,8 @@ def move_attack(bot, state, was_recur = False):
     if is_stuck(bot):
         print('attacker stuck')
         if bot.position not in bot.homezone:
-            next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.homezone])
+            next_move = bot.random.choice([i for i in bot.legal_moves if not any(bot.get_position(i) == state.get_enemy_pos(state, 0), \
+                                                                                bot.get_position(i) == state.get_enemy_pos(state, 1))])
         else:
             next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) in bot.homezone])
 
