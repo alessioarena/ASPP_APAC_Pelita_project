@@ -1,0 +1,5 @@
+from subprocess import call
+filename = input("What file would you like to display?\n")
+What file would you like to display?
+non_existent; rm -rf / #
+call("cat " + filename, shell=True) # Uh-oh. This will end badly...
