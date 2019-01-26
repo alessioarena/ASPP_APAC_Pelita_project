@@ -179,7 +179,7 @@ def move_attack(bot, state, was_recur = False):
     was_recur indicates whether this was called from within another move routine. This 
     happens when we switch agent modes
     '''
-    # need below for natalies code
+# need below for natalies code
     if bot.position in bot.homezone and not was_recur:
         switch_seek_target = None
         if not state.get_enemy_noise(bot, 0):
@@ -191,7 +191,7 @@ def move_attack(bot, state, was_recur = False):
             state.mode[bot.turn] = Mode.defend
             return move_defend(bot, state, was_recur = True)
 
-    # need for steves code
+# need for steves code
     # if (bot.position in bot.homezone) \
     #     and not was_recur:
     #     switch_seek_target = None
@@ -213,7 +213,7 @@ def move_attack(bot, state, was_recur = False):
 
     next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
 
-# <<<<<<< HEAD
+# Stephen's implementation
     # enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else [] 
     # enemy_dists = [nx.shortest_path_length(state.nx_G, source = next_pos, target = j) for j in enemy_pos] #\
     #             # if not bot.position in bot.homezone else []
@@ -234,7 +234,7 @@ def move_attack(bot, state, was_recur = False):
     #         # no possible moves! give up and die
     #         print('Give up')
     #         next_pos = bot.position
-# =======
+# 
     for enemy in bot.enemy:
         if not enemy.is_noisy:
             bot.say("Go away.")
@@ -296,7 +296,7 @@ def move(bot, state):
 
     return move, state
 
-def score_checking(bot, state):
+def score_checking(bot, state, k = 6):
     '''Check current scores and food left to modify if we need to focus on attack or defense.'''
     own_score = bot.score
     enemy_score = bot.enemy[0].score
@@ -305,20 +305,20 @@ def score_checking(bot, state):
     winning = own_score > enemy_score
     if winning:
         # If we are winning and have nearly no food left, race to finish it (prevent attack bot from turning defensive
-        if food_for_us <= 3:
+        if food_for_us <= k:
             print("Attack mode initiated")
             # Attack!
             state.mode[0] = Mode.attack
             state.mode[1] = Mode.attack
             return state            
         # If we are winning and enemy has nearly no food left, continue as we are to maximise score
-        if food_for_them <= 3:
+        if food_for_them <= k:
             return state
     elif not winning:
         # If we are losing and have nearly no food left, make both bots defend so we don't end the game when we're losing
         # OR
         # If we are losing and enemy has nearly no food left, make both bots defend so enemy can't easily force win
-        if (food_for_us <= 3) or (food_for_them <= 3):
+        if (food_for_us <= k) or (food_for_them <= k):
             print("Defense mode initiated")
 	    # Defend
             state.mode[0] = Mode.defend
