@@ -204,29 +204,29 @@ def move_attack(bot, state, was_recur = False):
     #         state.mode[bot.turn] = Mode.defend
     #         print(state.mode)
     #         return move_defend(bot, state, was_recur = True)    
-    if (state.target[bot.turn] is None) or (state.target[bot.turn] not in bot.enemy[0].food):
-        # find new food target with minimal distance to agent
-        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in bot.enemy[0].food]
-        min_dist_idx = np.argmin(food_dist)
-        state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
+    # if (state.target[bot.turn] is None) or (state.target[bot.turn] not in bot.enemy[0].food):
+    #     # find new food target with minimal distance to agent
+    #     food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in bot.enemy[0].food]
+    #     min_dist_idx = np.argmin(food_dist)
+    #     state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
 
-    next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+    # next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
 
 # Stephen's implementation
-    enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else [] 
-    enemy_dists = [nx.shortest_path_length(state.nx_G, source = next_pos, target = j) for j in enemy_pos] #\
-                # if not bot.position in bot.homezone else []
+    # enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else [] 
+    # enemy_dists = [nx.shortest_path_length(state.nx_G, source = next_pos, target = j) for j in enemy_pos] #\
+    #             # if not bot.position in bot.homezone else []
 
-    bad_steps = []
-    for i in range(0, len(enemy_pos)):
-        if enemy_dists[i] < 4:
-            # enemy is visible
-            bad_steps += [bot.get_move(next_step(bot.position, enemy_pos[i], state.nx_G)), ]
+    # bad_steps = []
+    # for i in range(0, len(enemy_pos)):
+    #     if enemy_dists[i] < 4:
+    #         # enemy is visible
+    #         bad_steps += [bot.get_move(next_step(bot.position, enemy_pos[i], state.nx_G)), ]
 
-    if len(bad_steps) > 0:
-        # bad_steps += [bot.get_move(bot.track[-2]), (0, 0)]
-        bad_steps += [i for i in bot.legal_moves for j in range(0, len(enemy_pos)) \
-                        if nx.shortest_path_length(state.nx_G, source = bot.get_position(i), target = enemy_pos[j]) <= 1]
+    # if len(bad_steps) > 0:
+    #     # bad_steps += [bot.get_move(bot.track[-2]), (0, 0)]
+    #     bad_steps += [i for i in bot.legal_moves for j in range(0, len(enemy_pos)) \
+    #                     if nx.shortest_path_length(state.nx_G, source = bot.get_position(i), target = enemy_pos[j]) <= 1]
     #     try:
     #         next_pos = bot.get_position(bot.random.choice([i for i in bot.legal_moves if not i in bad_steps]))
     #     except:
@@ -271,6 +271,29 @@ def move_attack(bot, state, was_recur = False):
             boundary_enemy_diff = np.array(enemy_boundary_dist) - np.array(boundary_dist)
             min_dist_idx = np.argmax(boundary_enemy_diff)
             next_pos = next_step(bot.position, state.home_boundaries[min_dist_idx], state.nx_G)   
+    elif bot.position in bot.homezone and (state.target[bot.turn] is None or state.target[bot.turn] not in bot.enemy[0].food):
+        # find new food target with minimal distance to agent
+        food_dist = [nx.shortest_path_length(graph_with_enemies, source = bot.position, target=i) for i in bot.enemy[0].food]
+        min_dist_idx = np.argmin(food_dist)
+        state.target[bot.turn] = bot.enemy[0].food[min_dist_idx]
+
+    next_pos = next_step(bot.position, state.target[bot.turn], state.nx_G)
+
+    enemy_pos = [i.position for i in bot.enemy if i.is_noisy == False] #if not bot.position in bot.homezone else [] 
+    enemy_dists = [nx.shortest_path_length(state.nx_G, source = next_pos, target = j) for j in enemy_pos] #\
+                # if not bot.position in bot.homezone else []
+
+    bad_steps = []
+    for i in range(0, len(enemy_pos)):
+        if enemy_dists[i] < 4:
+            # enemy is visible
+            bad_steps += [bot.get_move(next_step(bot.position, enemy_pos[i], state.nx_G)), ]
+
+    if len(bad_steps) > 0:
+        # bad_steps += [bot.get_move(bot.track[-2]), (0, 0)]
+        bad_steps += [i for i in bot.legal_moves for j in range(0, len(enemy_pos)) \
+                        if nx.shortest_path_length(state.nx_G, source = bot.get_position(i), target = enemy_pos[j]) <= 1]
+
     # sanity check
     try:
         if bot.get_move(next_pos) in bad_steps:
