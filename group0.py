@@ -264,8 +264,8 @@ def move(bot, state):
 
         # print optimal info
         print('------')
-        print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0)[-1])
-        print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1)[-1])
+        print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0)[0][-1])
+        print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1)[0][-1])
         print('------')
 
         score_checking(bot, state)
