@@ -9,9 +9,8 @@ from group0_utils import *
 import matplotlib as mp
 import matplotlib.pyplot as plt
 from operator import sub
-import pdb
 
-TEAM_NAME = 'Group0'
+TEAM_NAME = 'Itsa me Mario'
 
 class Mode(enum.Enum):
     # agent modes (can add more later)
@@ -20,7 +19,6 @@ class Mode(enum.Enum):
 
 def is_stuck(bot):
     return (len(bot.track) > 5) and (len(set(bot.track[-5:])) <= 2)
-
 
 class BotState:
     '''
@@ -300,7 +298,7 @@ def move_attack(bot, state, was_recur = False):
             next_pos = bot.get_position(bot.random.choice([i for i in bot.legal_moves if not i in bad_steps]))
     except:
         # give up
-        print('Give up!!!!')
+        #print('Give up!!!!')
         next_pos = bot.position
     
 
@@ -311,7 +309,7 @@ def move_attack(bot, state, was_recur = False):
     #         next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
 
     if is_stuck(bot):
-        print('attacker stuck')
+        #print('attacker stuck')
         if bot.position not in bot.homezone:
             next_move = bot.random.choice([i for i in bot.legal_moves if not any([bot.get_position(i) == state.get_enemy_pos(bot, 0), \
                                                                                 bot.get_position(i) == state.get_enemy_pos(bot, 1)])])
@@ -322,33 +320,33 @@ def move_attack(bot, state, was_recur = False):
     return next_move, state
 
 def move(bot, state):
-    #try:
-    if state is None:
-        state = BotState(bot, [Mode.defend, Mode.attack], bot.position)
+    try:
+        if state is None:
+            state = BotState(bot, [Mode.defend, Mode.attack], bot.position)
 
-    state.enemy_track_update(bot)
+        state.enemy_track_update(bot)
 
-    # print optimal info
+        # print optimal info
 
-    print('------')
-    print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0))
-    print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1))
-    print('------')
+        # print('------')
+        # print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0))
+        # print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1))
+        # print('------')
 
-    score_checking(bot, state)
-    if state.mode[bot.turn] == Mode.defend:
-        move, state = move_defend(bot, state)
+        score_checking(bot, state)
+        if state.mode[bot.turn] == Mode.defend:
+            move, state = move_defend(bot, state)
+        else:
+            move, state = move_attack(bot, state)
+    except:
+      bot.say('Exception!')
+      move = bot.random.choice(bot.legal_moves)
     else:
-        move, state = move_attack(bot, state)
-    #except:
-    #   bot.say('Exception!')
-    #   move = bot.random.choice(bot.legal_moves)
-    #else:
-    #    pass
+       pass
 
     # broadcast id
-    print(state.mode)
-    bot.say('bot '+str(bot.turn))
+    # print(state.mode)
+    # bot.say('bot '+str(bot.turn))
 
     # check for kill
     state.enemy_track_flush(bot, state.enemy_check_kill(bot, bot.get_position(move)))
