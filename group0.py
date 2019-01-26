@@ -8,6 +8,7 @@ from pelita.utils import Graph
 from group0_utils import *
 import matplotlib as mp
 import matplotlib.pyplot as plt
+import pdb
 
 TEAM_NAME = 'Group0'
 
@@ -60,15 +61,22 @@ class BotState:
                 killed+=[i, ]
         return killed
 
-    def get_enemy_pos(self, bot, enemy_idx):
+    def get_enemy_pos_info(self, bot, enemy_idx):
         # call AFTER enemy_track_update for latest information
-        if not self.enemy_track_noise[bot.turn][enemy_idx]:
+        if not self.enemy_track_noise[bot.turn][enemy_idx][-1]:
             # if not noisy, return own information
-            return (self.enemy_track[bot.turn][enemy_idx], False)
-        elif not self.enemy_track_noise[1-bot.turn][enemy_idx]:
-            return (self.enemy_track[1-bot.turn][enemy_idx], False)
+            return (self.enemy_track[bot.turn][enemy_idx][-1], self.enemy_track_noise[bot.turn][enemy_idx][-1])
+        elif len(self.enemy_track_noise[1-bot.turn][enemy_idx]) > 0 and not self.enemy_track_noise[1-bot.turn][enemy_idx][-1]:
+            # first round is a special case and we need ensure the other bot's enemy pos info is not empty
+            return (self.enemy_track[1-bot.turn][enemy_idx][-1], self.enemy_track_noise[1-bot.turn][enemy_idx][-1])
         else:
-            return (self.enemy_track[bot.turn][enemy_idx], True)
+            return (self.enemy_track[bot.turn][enemy_idx][-1], self.enemy_track_noise[bot.turn][enemy_idx][-1])
+
+    def get_enemy_pos(self, bot, enemy_idx):
+        return self.get_enemy_pos_info(bot, enemy_idx)[0]
+
+    def get_enemy_noise(self, bot, enemy_idx):
+        return self.get_enemy_pos_info(bot, enemy_idx)[1]
 
 def move_defend(bot, state, was_recur = False):
     '''
@@ -76,11 +84,11 @@ def move_defend(bot, state, was_recur = False):
     was_recur indicates whether this was called from within another move routine. This 
     happens when we switch agent modes
     '''
-    noisy_e0 = bot.enemy[0].is_noisy
-    noisy_e1 = bot.enemy[1].is_noisy
+    noisy_e0 = state.get_enemy_noise(bot, 0) 
+    noisy_e1 = state.get_enemy_noise(bot, 1) 
 
-    homezone_e0 = bot.enemy[0].position in bot.homezone
-    homezone_e1 = bot.enemy[1].position in bot.homezone
+    homezone_e0 = state.get_enemy_pos(bot, 0) in bot.homezone
+    homezone_e1 = state.get_enemy_pos(bot, 1) in bot.homezone
 
     # if there are two defenders and no enemies, we can become attackers
     if state.mode[0] == state.mode[1] == Mode.defend and not was_recur:
@@ -88,20 +96,20 @@ def move_defend(bot, state, was_recur = False):
             state.mode[bot.turn] = Mode.attack
             return move_attack(bot, state, True)
 
-    closest = closest_position(bot.position, (bot.enemy[0].position, bot.enemy[1].position), state.nx_G)
+    closest = closest_position(bot.position, (state.get_enemy_pos(bot, 0), state.get_enemy_pos(bot, 1)), state.nx_G)
 
     # target selection logic
     ## both in homezone
     if all([homezone_e0, homezone_e1]):
         if noisy_e0 + noisy_e1 == 1:
             ## select bot 0 if bot 1 is noisy (and therefore bot 0 is not)
-            state.target[bot.turn] = bot.enemy[0].position if noisy_e1 else bot.enemy[1].position
+            state.target[bot.turn] = state.get_enemy_pos(bot, 0) if noisy_e1 else state.get_enemy_pos(bot, 1) 
         else:
             ## go to the closest
             state.target[bot.turn] = bot.enemy[closest].position
     elif homezone_e0 + homezone_e1 == 1:
         ## select the one in the homezone
-        state.target[bot.turn] = bot.enemy[0].position if homezone_e0 else bot.enemy[1].position
+        state.target[bot.turn] = state.get_enemy_pos(bot, 0) if homezone_e0 else state.get_enemy_pos(bot, 1) 
     else:
         ## No one to be seen
         ## find out who is closer
@@ -127,7 +135,7 @@ def move_defend(bot, state, was_recur = False):
         # fallback to the spawning point
         base = state.spawning
     # if noisy
-    if bot.enemy[0].is_noisy and bot.enemy[1].is_noisy:
+    if state.get_enemy_noise(bot, 0) and state.get_enemy_noise(bot, 1):
         ## if current position in exclusion
         if bot.position[0] in exclusion_zone:
             ### find the side you are on and look behind you
@@ -171,18 +179,19 @@ def move_attack(bot, state, was_recur = False):
     was_recur indicates whether this was called from within another move routine. This 
     happens when we switch agent modes
     '''
-
+    # need below for natalies code
     if bot.position in bot.homezone and not was_recur:
         switch_seek_target = None
-        if not bot.enemy[0].is_noisy:
-            switch_seek_target = bot.enemy[0].position
-        elif not bot.enemy[1].is_noisy:
-            switch_seek_target = bot.enemy[1].position
+        if not state.get_enemy_noise(bot, 0):
+            switch_seek_target = state.get_enemy_pos(bot, 0) 
+        elif not state.get_enemy_noise(bot, 1):
+            switch_seek_target = state.get_enemy_pos(bot, 1)
         
         if switch_seek_target != None:
             state.mode[bot.turn] = Mode.defend
             return move_defend(bot, state, was_recur = True)
 
+    # need for steves code
     # if (bot.position in bot.homezone) \
     #     and not was_recur:
     #     switch_seek_target = None
@@ -263,10 +272,10 @@ def move(bot, state):
         state.enemy_track_update(bot)
 
         # print optimal info
-        print('------')
-        print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0)[0][-1])
-        print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1)[0][-1])
-        print('------')
+        # print('------')
+        # print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0))
+        # print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1))
+        # print('------')
 
         score_checking(bot, state)
         if state.mode[bot.turn] == Mode.defend:
@@ -274,10 +283,10 @@ def move(bot, state):
         else:
             move, state = move_attack(bot, state)
     except:
-        bot.say('Exception!')
-        move = bot.random.choice(bot.legal_moves)
+       bot.say('Exception!')
+       move = bot.random.choice(bot.legal_moves)
     else:
-        pass
+       pass
     
     # broadcast id
     bot.say('bot '+str(bot.turn))
