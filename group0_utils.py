@@ -31,7 +31,8 @@ def update_with_enemies(enemy_positions, graph):
     ## utility to update the weight based on multiplier
     def update_weight(graph, previous_graph, position, weight_multiplier):
         try:
-            graph.nodes[position]['weight'] = previous_graph.nodes[position]['weight'] * weight_multiplier
+            if previous_graph.nodes[position]['weight'] > 10:
+                graph.nodes[position]['weight'] = previous_graph.nodes[position]['weight'] * weight_multiplier
         except KeyError:
             ## the target node does not exist
             pass
@@ -40,20 +41,21 @@ def update_with_enemies(enemy_positions, graph):
     updated_graph = graph.copy()
     # possible moves
     moves = [(1, 0), (-1, 0), (0, 1), (0,-1)]
-    for m1 in moves:
-        # here we look at round +1 moves
-        pos1 = find_new_position(enemy_positions, m1)
-        for m2 in moves:
-            # here we look at round +2 moves
-            pos2 = find_new_position(pos1, m1)
-            for m3 in moves:
-                # here we look at round +3 moves
-                pos3 = find_new_position(pos2, m1)
-                ## cascade update to not overwrite previous changes (round+1 has priority over round=2 and so on)
-                update_weight(updated_graph, graph, pos3, 2)
-            update_weight(updated_graph, graph, pos2, 5)
-        update_weight(updated_graph, graph, pos1, 10)
-    update_weight(updated_graph, graph, enemy_positions, 30)
+    for enemy in enemy_positions:
+        for m1 in moves:
+            # here we look at round +1 moves
+            pos1 = find_new_position(enemy, m1)
+            for m2 in moves:
+                # here we look at round +2 moves
+                pos2 = find_new_position(pos1, m1)
+                for m3 in moves:
+                    # here we look at round +3 moves
+                    pos3 = find_new_position(pos2, m1)
+                    ## cascade update to not overwrite previous changes (round+1 has priority over round=2 and so on)
+                    update_weight(updated_graph, graph, pos3, 2)
+                update_weight(updated_graph, graph, pos2, 5)
+            update_weight(updated_graph, graph, pos1, 10)
+        update_weight(updated_graph, graph, enemy, 30)
     return updated_graph
 
 
@@ -102,6 +104,8 @@ def walls_to_nxgraph(walls, homezone=None):
     for coords in find_gaps(width, heigth, walls):
         if coords not in homezone or coords in exclusion:
             graph.add_node(coords, weight=100)
+        if coords in exclusion:
+            graph.add_node(coords, weight=10)
         else:
             graph.add_node(coords, weight=1)
         for delta_x, delta_y in ((1,0), (-1,0), (0,1), (0,-1)):
