@@ -161,13 +161,8 @@ def move_defend(bot, state, was_recur = False):
         next_move = bot.get_move(next_pos)
 
     if is_stuck(bot):
-<<<<<<< HEAD
         print('defender stuck')
         next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) in bot.homezone])
-=======
-        # print('defender stuck')
-        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
->>>>>>> aa7dcfbefe3636faf47764f5bb4cbf937b024f77
     return next_move, state
 
 def move_attack(bot, state, was_recur = False):
@@ -254,16 +249,10 @@ def move_attack(bot, state, was_recur = False):
             if next_pos == enemy.position:
                 next_pos = bot.get_position(bot.random.choice(bot.legal_moves))
 
-<<<<<<< HEAD
 
     # if is_stuck(bot):
     #     print('attacker stuck')
     #     next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
-=======
-    if is_stuck(bot):
-        # print('attacker stuck')
-        next_move = bot.random.choice([i for i in bot.legal_moves if bot.get_position(i) not in bot.enemy[0].homezone])
->>>>>>> aa7dcfbefe3636faf47764f5bb4cbf937b024f77
 
     next_move = bot.get_move(next_pos)
     return next_move, state
@@ -273,43 +262,24 @@ def move(bot, state):
     if state is None:
         state = BotState(bot, [Mode.defend, Mode.attack], bot.position)
 
-<<<<<<< HEAD
-    # manually update tracks
-    for i in range(0, len(bot.enemy)):
-        state.enemy_track[i] += [bot.enemy[i].position]
-        state.enemy_track_noise[i] += [bot.enemy[i].is_noisy]
+    state.enemy_track_update(bot)
+
+    # print optimal info
+    print('------')
+    print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0)[-1])
+    print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1)[-1])
+    print('------')
 
     score_checking(bot, state)
-    #print(state.mode)
-
     if state.mode[bot.turn] == Mode.defend:
         move, state = move_defend(bot, state)
     else:
         move, state = move_attack(bot, state)
-    
     # except:
     #     bot.say('Exception!')
-    #     return (bot.random.choice(bot.legal_moves), state)
+    #     move = bot.random.choice(bot.legal_moves)
     # else:
-=======
-        state.enemy_track_update(bot)
-
-        # print optimal info
-        print('------')
-        print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0)[-1])
-        print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1)[-1])
-        print('------')
-
-        score_checking(bot, state)
-        if state.mode[bot.turn] == Mode.defend:
-            move, state = move_defend(bot, state)
-        else:
-            move, state = move_attack(bot, state)
-    except:
-        bot.say('Exception!')
-        move = bot.random.choice(bot.legal_moves)
-    else:
-        pass
+    #     pass
     
     # broadcast id
     bot.say('bot '+str(bot.turn))
@@ -317,7 +287,6 @@ def move(bot, state):
     # check for kill
     state.enemy_track_flush(bot, state.enemy_check_kill(bot, bot.get_position(move)))
 
->>>>>>> aa7dcfbefe3636faf47764f5bb4cbf937b024f77
     return move, state
 
 def score_checking(bot, state):
