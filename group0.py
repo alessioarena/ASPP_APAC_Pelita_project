@@ -64,11 +64,11 @@ class BotState:
         # call AFTER enemy_track_update for latest information
         if not self.enemy_track_noise[bot.turn][enemy_idx]:
             # if not noisy, return own information
-            return self.enemy_track[bot.turn][enemy_idx]
+            return (self.enemy_track[bot.turn][enemy_idx], False)
         elif not self.enemy_track_noise[1-bot.turn][enemy_idx]:
-            return self.enemy_track[1-bot.turn][enemy_idx]
+            return (self.enemy_track[1-bot.turn][enemy_idx], False)
         else:
-            return self.enemy_track[bot.turn][enemy_idx]
+            return (self.enemy_track[bot.turn][enemy_idx], True)
 
 def move_defend(bot, state, was_recur = False):
     '''
