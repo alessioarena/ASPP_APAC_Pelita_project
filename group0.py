@@ -192,7 +192,7 @@ def move_attack(bot, state, was_recur = False):
     #         state.mode[bot.turn] = Mode.defend
     #         return move_defend(bot, state, was_recur = True)
 
-    # graph_with_enemies = update_with_enemies((state.get_enemy_pos(bot, 0), state.get_enemy_pos(bot, 1)), state.nx_G)
+    graph_with_enemies = update_with_enemies((state.get_enemy_pos(bot, 0), state.get_enemy_pos(bot, 1)), state.nx_G)
 # need for steves code
 
     if (bot.position in bot.homezone) \
@@ -304,24 +304,25 @@ def move(bot, state):
 
         # print optimal info
 
-        print('------')
-        print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0))
-        print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1))
-        print('------')
+        # print('------')
+        # print('Enemy 0 best pos: ', state.get_enemy_pos(bot, 0))
+        # print('Enemy 1 best pos: ', state.get_enemy_pos(bot, 1))
+        # print('------')
 
         score_checking(bot, state)
         if state.mode[bot.turn] == Mode.defend:
             move, state = move_defend(bot, state)
         else:
             move, state = move_attack(bot, state)
-    except:
+    except Exception as e:
        bot.say('Exception!')
+       print(str(e))
        move = bot.random.choice(bot.legal_moves)
     else:
         pass
 
     # broadcast id
-    bot.say('bot '+str(bot.turn))
+    # bot.say('bot '+str(bot.turn))
 
     # check for kill
     state.enemy_track_flush(bot, state.enemy_check_kill(bot, bot.get_position(move)))
