@@ -1,6 +1,6 @@
 """ Team Bot Implementation 
 """
-
+import sys
 import numpy as np
 import networkx as nx
 import enum
@@ -315,9 +315,10 @@ def move(bot, state):
         else:
             move, state = move_attack(bot, state)
     except Exception as e:
-       bot.say('Exception!')
-       print(str(e))
-       move = bot.random.choice(bot.legal_moves)
+        bot.say('Exception!')
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        print('{0}: {1}'.format(exc_tb.tb_lineno, str(e)))
+        move = bot.random.choice(bot.legal_moves)
     else:
         pass
 
